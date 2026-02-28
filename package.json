@@ -15,7 +15,7 @@
     "check": "prettier --write . && biome check --write ."
   },
   "dependencies": {
-    "@astrojs/cloudflare": "latest"
+    "@astrojs/cloudflare": "latest",
     "@astrojs/check": "^0.9.6",
     "@astrojs/node": "^9.5.2",
     "@astrojs/react": "latest",
