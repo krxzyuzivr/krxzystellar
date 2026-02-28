@@ -1,15 +1,15 @@
-import { execFileSync } from "node:child_process";
 import path from "node:path";
-import node from "@astrojs/node";
+import cloudflare from "@astrojs/cloudflare"; // Changed from @astrojs/node
 import react from "@astrojs/react";
 import tailwind from "@astrojs/tailwind";
 import { baremuxPath } from "@mercuryworkshop/bare-mux/node";
 import { epoxyPath } from "@mercuryworkshop/epoxy-transport";
-import { server as wisp } from "@mercuryworkshop/wisp-js/server";
 import compress from "@playform/compress";
 import { defineConfig } from "astro/config";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 import INConfig from "./config";
+
+// Note: Removed 'wisp' and 'execFileSync' as they are incompatible with Cloudflare's runtime environment.
 
 const integrations = [react(), tailwind({ applyBaseStyles: false })];
 
@@ -27,9 +27,11 @@ if (INConfig.server?.compress !== false) {
 }
 
 export default defineConfig({
-  output: "server",
-  adapter: node({
-    mode: "middleware",
+  output: "server", // Required for proxy functionality
+  adapter: cloudflare({
+    platformProxy: {
+      enabled: true,
+    },
   }),
   integrations,
   prefetch: {
@@ -48,18 +50,8 @@ export default defineConfig({
   vite: {
     logLevel: "warn",
     define: {
-      __COMMIT_DATE__: JSON.stringify(
-        (() => {
-          try {
-            return execFileSync("git", ["show", "--no-patch", "--format=%ci"])
-              .toString()
-              .trim()
-              .replace(/[<>"'&]/g, "");
-          } catch {
-            return new Date().toISOString();
-          }
-        })(),
-      ),
+      // Replaced execFileSync with a standard timestamp to avoid build errors on Cloudflare
+      __COMMIT_DATE__: JSON.stringify(new Date().toISOString()),
     },
     resolve: {
       alias: {
@@ -67,12 +59,6 @@ export default defineConfig({
       },
     },
     plugins: [
-      {
-        name: "vite-wisp-server",
-        configureServer(server) {
-          server.httpServer?.on("upgrade", (req, socket, head) => (req.url?.startsWith("/f") ? wisp.routeRequest(req, socket, head) : undefined));
-        },
-      },
       viteStaticCopy({
         targets: [
           {
